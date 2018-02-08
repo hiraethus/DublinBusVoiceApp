@@ -7,13 +7,22 @@ const http = require('http');
 
 // a. the action name from the get_bus_stop_info action
 const NAME_ACTION = 'get_bus_stop_info';
+const LOCATION_ACTION = 'find_closest_bus_stop';
 // b. the parameters that are parsed from the get_bus_stop_info action
 const STOP_ID = 'stop-number';
+
+
 
 exports.dublinBusApp = functions.https.onRequest((request, response) => {
     const app = new App({request, response});
     console.log ('Request headers: ' + JSON.stringify(request.headers)); 
     console.log('Request body: ' + JSON.stringify(request.body));
+
+    function findNearestBusStop() {
+		if (!app.isPermissionGranted()) {
+			app.askForPermissions('To find your closest bus stop', [app.SupportedPermissions.DEVICE_PRECISE_LOCATION]);
+		}
+    }
 
     function getBusStopInfo (id) {
         let busId = app.getArgument(STOP_ID);
@@ -21,7 +30,6 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
     }
 
     function retrieveBusStop(id) {
-	let parsedData = '';
         http.get("http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid="+id, (res) => {
             res.setEncoding('utf8');
             let rawData = '';
@@ -52,6 +60,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
+	actionMap.set(LOCATION_ACTION, findNearestBusStop);
 
     app.handleRequest(actionMap);
 });
