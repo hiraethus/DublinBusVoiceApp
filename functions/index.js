@@ -25,22 +25,72 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		}
     }
 
-	function sayLocation() {
+	function sayNearestBusStop() {
 		if (!app.isPermissionGranted()) {
-			app.tell("I need your permission for this")
+			app.tell("I need your permission for this");
 		}
 		let deviceCoordinates = app.getDeviceLocation().coordinates;
-		let response = '';
-		response += `Your latitude is ${deviceCoordinates.latitude}. `;
-		response += `Your longitude is ${deviceCoordinates.longitude}. Make of it what you will.`;
-
-		app.ask(response)
+		
+		retrieveBusStopList().then((busStops) => {
+			busStops.forEach((res) => {
+				let resDistLng = Math.abs(deviceCoordinates.longitude - parseFloat(res.longitude));
+				let resDistLat = Math.abs(deviceCoordinates.latitude  - parseFloat(res.latitude));
+				res.distance = Math.sqrt(
+					Math.pow(resDistLng, 2),
+					Math.pow(resDistLat, 2)
+				);
+			});
+			
+			busStops.sort((res1, res2) => {
+				return res1.distance - res2.distance;
+			});
+			
+			let closestBusStop = busStops[0];
+			let response = `Your closest bus stop is number ${closestBusStop.stopid}.`;
+			response += buildBusResponse(closestBusStop);
+			app.ask(response);
+		});
 	}
+	
+	function retrieveBusStopList() {
+		return new Promise((resolve, reject) => {
+			http.get("http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation", (res) => {
+				res.setEncoding('utf8');
+				let rawData = '';
+				res.on('data', (chunk) => { rawData += chunk; });
+				res.on('end', () => {
+					try {
+						let result = JSON.parse(rawData);
+						if (result.numberofresults > 0) {
+							console.log("Got here");
+							resolve(result.results);
+						} else {
+							reject(new Error("There were no bus stops"));
+						}
+					} catch (e) { 
+						reject(e);
+					}
+				});
+			});
+		});
+    }
 
     function getBusStopInfo (id) {
         let busId = app.getArgument(STOP_ID);
         retrieveBusStop(busId);
     }
+	
+	function buildBusResponse(busStop) {
+		let response = '';
+		response += "The bus stop's name is " + busStop.fullname + ". ";
+		let operators = busStop.operators;
+		let routes = operators.map((op) => op.routes);
+		let flatRoutes = [].concat.apply([], routes);
+		response += "The following routes operate from this bus stop. ";
+		response += flatRoutes.join(', ');
+		
+		return response;
+	}
 
     function retrieveBusStop(id) {
         http.get("http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid="+id, (res) => {
@@ -54,12 +104,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
                     if (result.numberofresults == 0) {
                         response += "Bus stop number " + id + " does not exist.";
                     } else {
-                        response += "The bus stop's name is " + result.results[0].fullname + ". ";
-                        let operators = result.results[0].operators;
-                        let routes = operators.map((op) => op.routes);
-                        let flatRoutes = [].concat.apply([], routes);
-                        response += "The following routes operate from this bus stop: ";
-                        response += flatRoutes.join(', ');
+						response = buildBusResponse(result.results[0]);
                    }
 
                     response += ". Can I show you on the map?"
@@ -74,7 +119,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
 	actionMap.set(LOCATION_REQUESTED_ACTION, findNearestBusStop);
-	actionMap.set(NEAREST_BUS_ACTION, sayLocation);
+	actionMap.set(NEAREST_BUS_ACTION, sayNearestBusStop);
 
     app.handleRequest(actionMap);
 });
