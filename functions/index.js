@@ -7,7 +7,8 @@ const http = require('http');
 
 // a. the action name from the get_bus_stop_info action
 const NAME_ACTION = 'get_bus_stop_info';
-const LOCATION_ACTION = 'find_closest_bus_stop';
+const LOCATION_REQUESTED_ACTION = 'find_closest_bus_stop';
+const NEAREST_BUS_ACTION = 'find_closest_bus_stop_shared_location';
 // b. the parameters that are parsed from the get_bus_stop_info action
 const STOP_ID = 'stop-number';
 
@@ -23,6 +24,18 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			app.askForPermissions('To find your closest bus stop', [app.SupportedPermissions.DEVICE_PRECISE_LOCATION]);
 		}
     }
+
+	function sayLocation() {
+		if (!app.isPermissionGranted()) {
+			app.tell("I need your permission for this")
+		}
+		let deviceCoordinates = app.getDeviceLocation().coordinates;
+		let response = '';
+		response += `Your latitude is ${deviceCoordinates.latitude}. `;
+		response += `Your longitude is ${deviceCoordinates.longitude}. Make of it what you will.`;
+
+		app.ask(response)
+	}
 
     function getBusStopInfo (id) {
         let busId = app.getArgument(STOP_ID);
@@ -60,7 +73,8 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 // d. build an action map, which maps intent names to functions
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
-	actionMap.set(LOCATION_ACTION, findNearestBusStop);
+	actionMap.set(LOCATION_REQUESTED_ACTION, findNearestBusStop);
+	actionMap.set(NEAREST_BUS_ACTION, sayLocation);
 
     app.handleRequest(actionMap);
 });
