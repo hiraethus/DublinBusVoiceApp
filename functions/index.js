@@ -6,14 +6,13 @@ const functions = require('firebase-functions');
 const http = require('http');
 const geom = require('spherical-geometry-js');
 
-// a. the action name from the get_bus_stop_info action
+
 const NAME_ACTION = 'get_bus_stop_info';
 const LOCATION_REQUESTED_ACTION = 'find_closest_bus_stop';
 const NEAREST_BUS_ACTION = 'find_closest_bus_stop_shared_location';
-// b. the parameters that are parsed from the get_bus_stop_info action
+
 const STOP_ID = 'stop-number';
 
-// urls
 const ALL_BUSES_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation";
 const BUS_STOP_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid=";
 
@@ -23,13 +22,13 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
     console.log ('Request headers: ' + JSON.stringify(request.headers)); 
     console.log('Request body: ' + JSON.stringify(request.body));
 
-    function findNearestBusStop() {
+    const findNearestBusStop = () => {
 		if (!app.isPermissionGranted()) {
 			app.askForPermissions('To find your closest bus stop', [app.SupportedPermissions.DEVICE_PRECISE_LOCATION]);
 		}
-    }
+    };
 
-	function sayNearestBusStop() {
+	const sayNearestBusStop = () => {
 		if (!app.isPermissionGranted()) {
 			app.tell("I need your permission for this");
 		}
@@ -51,18 +50,18 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			response += buildBusResponse(closestBusStop);
 			app.tell(response);
 		});
-	}
+	};
 	
-	function getBusStopInfo (id) {
+	const getBusStopInfo = (id) => {
         let busId = app.getArgument(STOP_ID);
 		
 		retrieveBusesInfo(`${BUS_STOP_URL}${busId}`)
 			.then((busStops) => {
 				app.tell(buildBusResponse(busStops[0]));
 			});
-    }
+    };
 
-	function retrieveBusesInfo(url) {
+	const retrieveBusesInfo = (url) => {
 		return new Promise((resolve, reject) => {
 			http.get(url, (res) => {
 				res.setEncoding('utf8');
@@ -83,9 +82,9 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 				});
 			});
 		});
-    }
+    };
 
-	function buildBusResponse(busStop) {
+	const buildBusResponse = (busStop) => {
 		let response = '';
 		response += "The bus stop's name is " + busStop.fullname + ". ";
 		let operators = busStop.operators;
@@ -95,7 +94,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		response += flatRoutes.join(', ');
 		
 		return response;
-	}
+	};
 
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
