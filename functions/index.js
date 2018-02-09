@@ -15,7 +15,7 @@ const STOP_ID = 'stop-number';
 
 // urls
 const ALL_BUSES_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation";
-
+const BUS_STOP_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid=";
 
 
 exports.dublinBusApp = functions.https.onRequest((request, response) => {
@@ -53,6 +53,15 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		});
 	}
 	
+	function getBusStopInfo (id) {
+        let busId = app.getArgument(STOP_ID);
+		
+		retrieveBusesInfo(`${BUS_STOP_URL}${busId}`)
+			.then((busStops) => {
+				app.tell(buildBusResponse(busStops[0]));
+			});
+    }
+
 	function retrieveBusesInfo(url) {
 		return new Promise((resolve, reject) => {
 			http.get(url, (res) => {
@@ -76,11 +85,6 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		});
     }
 
-    function getBusStopInfo (id) {
-        let busId = app.getArgument(STOP_ID);
-        retrieveBusStop(busId);
-    }
-	
 	function buildBusResponse(busStop) {
 		let response = '';
 		response += "The bus stop's name is " + busStop.fullname + ". ";
@@ -93,28 +97,6 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		return response;
 	}
 
-    function retrieveBusStop(id) {
-        http.get("http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid="+id, (res) => {
-            res.setEncoding('utf8');
-            let rawData = '';
-            res.on('data', (chunk) => { rawData += chunk; });
-            res.on('end', () => {
-                try {
-					let response = "";
-                    let result = JSON.parse(rawData);
-                    if (result.numberofresults == 0) {
-                        response += "Bus stop number " + id + " does not exist.";
-                    } else {
-						response = buildBusResponse(result.results[0]);
-                   }
-
-                   app.tell(response);
-                } catch (e) { console.error(e.message); }
-            });
-        });
-    }
-
-// d. build an action map, which maps intent names to functions
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
 	actionMap.set(LOCATION_REQUESTED_ACTION, findNearestBusStop);
