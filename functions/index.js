@@ -92,26 +92,41 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 
 	const buildBusResponse = (busStop, realTimeInfo) => {
 		let response = '';
+
 		response += 'The bus stop\'s name is ' + busStop.fullname + '. ';
 		let operators = busStop.operators;
-
 		response += 'The following routes operate from this bus stop. ';
-		let hasRealTimeInfo = realTimeInfo.errorcode == 0;
+		let routes = operators.map((op) => op.routes);
+		let flatRoutes = [].concat.apply([], routes);
+		response += flatRoutes.join(', ');
+		response += '. ';
+
+		let hasRealTimeInfo = realTimeInfo.length > 0;
 		if (hasRealTimeInfo) {
-			let routes = realTimeInfo.map((op) => op.route);
-			response += routes.join(', ');
-			response += '. There is no real time information for this bus stop.';
+			response += buildNextRealTimeBus(realTimeInfo);
 		} else {
-			let routes = operators.map((op) => op.routes);
-			let flatRoutes = [].concat.apply([], routes);
-			response += flatRoutes.join(', ');
-			response += '. ';
+			response += 'There is no real time information for this bus stop. ';
 		}
-		
 		
 		return response;
 	};
 	
+	const buildNextRealTimeBus = (realTimeInfo) => {
+		let r = '';
+		let nextBus = realTimeInfo[0];
+
+		r += `The next bus is the number ${nextBus.route}
+			to ${nextBus.destination}. `
+
+		if (nextBus.duetime === 'Due') {
+			r += 'This bus is due now. ';
+		} else {
+			r += `The bus is due to arrive in ${nextBus.duetime} minutes. `;
+		}
+
+		return r;
+	}
+
 	
 
     let actionMap = new Map();
