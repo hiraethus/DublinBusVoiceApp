@@ -34,16 +34,11 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		}
 		let deviceCoordinates = app.getDeviceLocation().coordinates;
 		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
+		let addDistanceFromMe = _makeAddDistanceFromMe(deviceLatLng);
 		
 		retrieveBusesInfo(ALL_BUSES_URL).then((busStops) => {
-			busStops.forEach((res) => {
-				let resLatLng = new geom.LatLng(res.latitude,res.longitude)
-				res.distance = geom.computeDistanceBetween(deviceLatLng, resLatLng);
-			});
-			
-			busStops.sort((res1, res2) => {
-				return res1.distance - res2.distance;
-			});
+			busStops.forEach(addDistanceFromMe);
+			busStops.sort(_byDistance);
 			
 			let closestBusStop = busStops[0];
 			let response = `Your closest bus stop is number ${closestBusStop.stopid}.`;
@@ -51,6 +46,15 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			app.tell(response);
 		});
 	};
+	
+	const _makeAddDistanceFromMe = (deviceLatLng) => {
+		return (busStop) => {
+			let busStopLatLng = new geom.LatLng(busStop.latitude,busStop.longitude)
+			busStop.distance = geom.computeDistanceBetween(deviceLatLng, busStopLatLng);
+		};
+	};
+	
+	const _byDistance = (res1, res2) => res1.distance - res2.distance;
 	
 	const getBusStopInfo = (id) => {
         let busId = app.getArgument(STOP_ID);
