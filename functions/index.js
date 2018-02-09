@@ -30,11 +30,10 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 
 	const sayNearestBusStop = () => {
 		if (!app.isPermissionGranted()) {
-			app.tell('I need your permission for this');
+			app.tell('I need your permission for this. Please try again.');
 		}
-		let deviceCoordinates = app.getDeviceLocation().coordinates;
-		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
-		let addDistanceFromMe = _makeAddDistanceFromMe(deviceLatLng);
+
+		let addDistanceFromMe = _makeAddDistanceFromMe();
 		
 		retrieveBusesInfo(ALL_BUSES_URL).then((busStops) => {
 			busStops.forEach(addDistanceFromMe);
@@ -47,7 +46,10 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		});
 	};
 	
-	const _makeAddDistanceFromMe = (deviceLatLng) => {
+	const _makeAddDistanceFromMe = () => {
+		let deviceCoordinates = app.getDeviceLocation().coordinates;
+		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
+
 		return (busStop) => {
 			let busStopLatLng = new geom.LatLng(busStop.latitude,busStop.longitude)
 			busStop.distance = geom.computeDistanceBetween(deviceLatLng, busStopLatLng);
