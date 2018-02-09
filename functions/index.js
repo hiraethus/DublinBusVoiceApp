@@ -13,8 +13,8 @@ const NEAREST_BUS_ACTION = 'find_closest_bus_stop_shared_location';
 
 const STOP_ID = 'stop-number';
 
-const ALL_BUSES_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation";
-const BUS_STOP_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid=";
+const ALL_BUSES_URL = 'http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation';
+const BUS_STOP_URL = 'http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid=';
 
 
 exports.dublinBusApp = functions.https.onRequest((request, response) => {
@@ -30,7 +30,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 
 	const sayNearestBusStop = () => {
 		if (!app.isPermissionGranted()) {
-			app.tell("I need your permission for this");
+			app.tell('I need your permission for this');
 		}
 		let deviceCoordinates = app.getDeviceLocation().coordinates;
 		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
@@ -75,10 +75,9 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 					try {
 						let result = JSON.parse(rawData);
 						if (result.numberofresults > 0) {
-							console.log("Got here");
 							resolve(result.results);
 						} else {
-							reject(new Error("There were no bus stops"));
+							reject(new Error('There were no bus stops'));
 						}
 					} catch (e) { 
 						reject(e);
@@ -90,11 +89,11 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 
 	const buildBusResponse = (busStop) => {
 		let response = '';
-		response += "The bus stop's name is " + busStop.fullname + ". ";
+		response += 'The bus stop\'s name is ' + busStop.fullname + '. ';
 		let operators = busStop.operators;
 		let routes = operators.map((op) => op.routes);
 		let flatRoutes = [].concat.apply([], routes);
-		response += "The following routes operate from this bus stop. ";
+		response += 'The following routes operate from this bus stop. ';
 		response += flatRoutes.join(', ');
 		
 		return response;
