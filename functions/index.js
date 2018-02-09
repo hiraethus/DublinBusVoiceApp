@@ -37,7 +37,6 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			busStops.forEach((res) => {
 				let resLatLng = new geom.LatLng(res.latitude,res.longitude)
 				res.distance = geom.computeDistanceBetween(deviceLatLng, resLatLng);
-				console.log(res.distance);
 			});
 			
 			busStops.sort((res1, res2) => {
@@ -47,7 +46,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			let closestBusStop = busStops[0];
 			let response = `Your closest bus stop is number ${closestBusStop.stopid}.`;
 			response += buildBusResponse(closestBusStop);
-			app.ask(response);
+			app.tell(response);
 		});
 	}
 	
@@ -98,7 +97,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
             res.on('data', (chunk) => { rawData += chunk; });
             res.on('end', () => {
                 try {
-		    let response = "";
+					let response = "";
                     let result = JSON.parse(rawData);
                     if (result.numberofresults == 0) {
                         response += "Bus stop number " + id + " does not exist.";
@@ -106,9 +105,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 						response = buildBusResponse(result.results[0]);
                    }
 
-                    response += ". Can I show you on the map?"
-
-                   app.ask(response);
+                   app.tell(response);
                 } catch (e) { console.error(e.message); }
             });
         });
