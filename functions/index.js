@@ -15,6 +15,7 @@ const STOP_ID = 'stop-number';
 
 const ALL_BUSES_URL = 'http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation';
 const BUS_STOP_URL = 'http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation?stopid=';
+const REAL_TIME_STOP_URL = 'http://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation?stopid=';
 
 
 exports.dublinBusApp = functions.https.onRequest((request, response) => {
@@ -41,8 +42,12 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			
 			let closestBusStop = busStops[0];
 			let response = `Your closest bus stop is number ${closestBusStop.stopid}.`;
-			response += buildBusResponse(closestBusStop);
-			app.tell(response);
+			
+			retrieveBusesInfo(`${REAL_TIME_STOP_URL}${closestBusStop.stopid}`)
+				.then((realTimeInfo) => {
+					response += buildBusResponse(closestBusStop, realTimeInfo);
+					app.tell(response);
+				});
 		});
 	};
 	
@@ -61,9 +66,9 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 	const getBusStopInfo = (id) => {
         let busId = app.getArgument(STOP_ID);
 		
-		retrieveBusesInfo(`${BUS_STOP_URL}${busId}`)
-			.then((busStops) => {
-				app.tell(buildBusResponse(busStops[0]));
+		Promise.all([retrieveBusesInfo(`${BUS_STOP_URL}${busId}`), retrieveBusesInfo(`${REAL_TIME_STOP_URL}${busId}`)])
+			.then(([busStops, realTimeInfo]) => {
+				app.tell(buildBusResponse(busStops[0], realTimeInfo));
 			});
     };
 
@@ -76,11 +81,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 				res.on('end', () => {
 					try {
 						let result = JSON.parse(rawData);
-						if (result.numberofresults > 0) {
-							resolve(result.results);
-						} else {
-							reject(new Error('There were no bus stops'));
-						}
+						resolve(result.results);
 					} catch (e) { 
 						reject(e);
 					}
@@ -89,17 +90,29 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		});
     };
 
-	const buildBusResponse = (busStop) => {
+	const buildBusResponse = (busStop, realTimeInfo) => {
 		let response = '';
 		response += 'The bus stop\'s name is ' + busStop.fullname + '. ';
 		let operators = busStop.operators;
-		let routes = operators.map((op) => op.routes);
-		let flatRoutes = [].concat.apply([], routes);
+
 		response += 'The following routes operate from this bus stop. ';
-		response += flatRoutes.join(', ');
+		let hasRealTimeInfo = realTimeInfo.errorcode == 0;
+		if (hasRealTimeInfo) {
+			let routes = realTimeInfo.map((op) => op.route);
+			response += routes.join(', ');
+			response += '. There is no real time information for this bus stop.';
+		} else {
+			let routes = operators.map((op) => op.routes);
+			let flatRoutes = [].concat.apply([], routes);
+			response += flatRoutes.join(', ');
+			response += '. ';
+		}
+		
 		
 		return response;
 	};
+	
+	
 
     let actionMap = new Map();
     actionMap.set(NAME_ACTION, getBusStopInfo);
