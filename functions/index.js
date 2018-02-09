@@ -13,6 +13,9 @@ const NEAREST_BUS_ACTION = 'find_closest_bus_stop_shared_location';
 // b. the parameters that are parsed from the get_bus_stop_info action
 const STOP_ID = 'stop-number';
 
+// urls
+const ALL_BUSES_URL = "http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation";
+
 
 
 exports.dublinBusApp = functions.https.onRequest((request, response) => {
@@ -33,7 +36,7 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		let deviceCoordinates = app.getDeviceLocation().coordinates;
 		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
 		
-		retrieveBusStopList().then((busStops) => {
+		retrieveBusesInfo(ALL_BUSES_URL).then((busStops) => {
 			busStops.forEach((res) => {
 				let resLatLng = new geom.LatLng(res.latitude,res.longitude)
 				res.distance = geom.computeDistanceBetween(deviceLatLng, resLatLng);
@@ -50,9 +53,9 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 		});
 	}
 	
-	function retrieveBusStopList() {
+	function retrieveBusesInfo(url) {
 		return new Promise((resolve, reject) => {
-			http.get("http://data.dublinked.ie/cgi-bin/rtpi/busstopinformation", (res) => {
+			http.get(url, (res) => {
 				res.setEncoding('utf8');
 				let rawData = '';
 				res.on('data', (chunk) => { rawData += chunk; });
