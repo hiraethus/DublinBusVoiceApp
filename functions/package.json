@@ -11,7 +11,8 @@
   "dependencies": {
     "actions-on-google": "^1.0.0",
     "firebase-admin": "~5.8.1",
-    "firebase-functions": "^0.8.1"
+    "firebase-functions": "^0.8.1",
+    "spherical-geometry-js": "1.0.1"
   },
   "private": true
 }

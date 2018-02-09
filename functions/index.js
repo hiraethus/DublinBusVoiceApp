@@ -4,6 +4,7 @@ process.env.DEBUG = 'actions-on-google:*'
 const App = require('actions-on-google').DialogflowApp;
 const functions = require('firebase-functions');
 const http = require('http');
+const geom = require('spherical-geometry-js');
 
 // a. the action name from the get_bus_stop_info action
 const NAME_ACTION = 'get_bus_stop_info';
@@ -30,15 +31,13 @@ exports.dublinBusApp = functions.https.onRequest((request, response) => {
 			app.tell("I need your permission for this");
 		}
 		let deviceCoordinates = app.getDeviceLocation().coordinates;
+		let deviceLatLng = new geom.LatLng(deviceCoordinates.latitude, deviceCoordinates.longitude);
 		
 		retrieveBusStopList().then((busStops) => {
 			busStops.forEach((res) => {
-				let resDistLng = Math.abs(deviceCoordinates.longitude - parseFloat(res.longitude));
-				let resDistLat = Math.abs(deviceCoordinates.latitude  - parseFloat(res.latitude));
-				res.distance = Math.sqrt(
-					Math.pow(resDistLng, 2),
-					Math.pow(resDistLat, 2)
-				);
+				let resLatLng = new geom.LatLng(res.latitude,res.longitude)
+				res.distance = geom.computeDistanceBetween(deviceLatLng, resLatLng);
+				console.log(res.distance);
 			});
 			
 			busStops.sort((res1, res2) => {
